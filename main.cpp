@@ -16,7 +16,7 @@ double computeRMSE(const std::vector<Complex>& original, const std::vector<Compl
 
 int main() {
     setlocale(LC_ALL, "Russian");
-    const size_t N = 9; // Ïðèìåð äëèíû, êðàòíîé 3 (ìîæíî ìåíÿòü íà 8, 25 è ò.ä.)
+    const size_t N = 9; // ÐŸÑ€Ð¸Ð¼ÐµÑ€ Ð´Ð»Ð¸Ð½Ñ‹, ÐºÑ€Ð°Ñ‚Ð½Ð¾Ð¹ 3 (Ð¼Ð¾Ð¶Ð½Ð¾ Ð¼ÐµÐ½ÑÑ‚ÑŒ Ð½Ð° 8, 25 Ð¸ Ñ‚.Ð´.)
 
     std::vector<Complex> data(N);
 
@@ -25,25 +25,25 @@ int main() {
     }
     std::vector<Complex> original_data = data;
 
-    std::cout << "Èñõîäíûå äàííûå:\n";
+    std::cout << "Ð˜ÑÑ…Ð¾Ð´Ð½Ñ‹Ðµ Ð´Ð°Ð½Ð½Ñ‹Ðµ:\n";
     for (const auto& num : data) {
         std::cout << num << "\n";
     }
 
-    FFT::transform(data, 0); // Ïðÿìîå ïðåîáðàçîâàíèå
-    std::cout << "\nÏîñëå ïðÿìîãî FFT:\n";
+    FFT::transform(data, 0); // ÐŸÑ€ÑÐ¼Ð¾Ðµ Ð¿Ñ€ÐµÐ¾Ð±Ñ€Ð°Ð·Ð¾Ð²Ð°Ð½Ð¸Ðµ
+    std::cout << "\nÐŸÐ¾ÑÐ»Ðµ Ð¿Ñ€ÑÐ¼Ð¾Ð³Ð¾ FFT:\n";
     for (const auto& num : data) {
         std::cout << num << "\n";
     }
 
-    FFT::transform(data, 1); // Îáðàòíîå ïðåîáðàçîâàíèå
-    std::cout << "\nÏîñëå îáðàòíîãî FFT:\n";
+    FFT::transform(data, 1); // ÐžÐ±Ñ€Ð°Ñ‚Ð½Ð¾Ðµ Ð¿Ñ€ÐµÐ¾Ð±Ñ€Ð°Ð·Ð¾Ð²Ð°Ð½Ð¸Ðµ
+    std::cout << "\nÐŸÐ¾ÑÐ»Ðµ Ð¾Ð±Ñ€Ð°Ñ‚Ð½Ð¾Ð³Ð¾ FFT:\n";
     for (const auto& num : data) {
         std::cout << num << "\n";
     }
 
     double error = computeRMSE(original_data, data);
-    std::cout << "\nÑðåäíåêâàäðàòè÷íàÿ îøèáêà (RMSE): " << error << "\n";
+    std::cout << "\nÐ¡Ñ€ÐµÐ´Ð½ÐµÐºÐ²Ð°Ð´Ñ€Ð°Ñ‚Ð¸Ñ‡Ð½Ð°Ñ Ð¾ÑˆÐ¸Ð±ÐºÐ° (RMSE): " << error << "\n";
 
     return 0;
 }
