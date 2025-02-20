@@ -18,14 +18,14 @@ double RandomGenerator::Sum12() {
 void FFT::transform(std::vector<Complex>& data, int isInverse) {
     size_t n = data.size();
 
-    // Проверка на кратность 2, 3, 5
+    // РџСЂРѕРІРµСЂРєР° РЅР° РєСЂР°С‚РЅРѕСЃС‚СЊ 2, 3, 5
     size_t temp = n;
     while (temp > 1) {
         if (temp % 2 == 0) temp /= 2;
         else if (temp % 3 == 0) temp /= 3;
         else if (temp % 5 == 0) temp /= 5;
         else {
-            std::cerr << "FFT не поддерживает длину " << n << " (должна быть кратна 2, 3 или 5)\n";
+            std::cerr << "FFT РЅРµ РїРѕРґРґРµСЂР¶РёРІР°РµС‚ РґР»РёРЅСѓ " << n << " (РґРѕР»Р¶РЅР° Р±С‹С‚СЊ РєСЂР°С‚РЅР° 2, 3 РёР»Рё 5)\n";
             return;
         }
     }
@@ -37,7 +37,7 @@ void FFT::transform(std::vector<Complex>& data, int isInverse) {
         fftMixedRadix(data, isInverse);
     }
 
-    // Масштабирование для обратного преобразования
+    // РњР°СЃС€С‚Р°Р±РёСЂРѕРІР°РЅРёРµ РґР»СЏ РѕР±СЂР°С‚РЅРѕРіРѕ РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёСЏ
     if (isInverse) {
         double scale = 1.0 / static_cast<double>(n);
         for (auto& x : data) x *= scale;
@@ -48,7 +48,7 @@ void FFT::fftRadix2(std::vector<Complex>& data, int isInverse) {
     size_t n = data.size();
     if (n <= 1) return;
 
-    // Перестановка бит
+    // РџРµСЂРµСЃС‚Р°РЅРѕРІРєР° Р±РёС‚
     size_t logN = std::log2(n);
     for (size_t i = 0, j = 0; i < n; ++i) {
         if (i < j) std::swap(data[i], data[j]);
@@ -60,9 +60,9 @@ void FFT::fftRadix2(std::vector<Complex>& data, int isInverse) {
         j ^= mask;
     }
 
-    // Алгоритм Cooley-Tukey
+    // РђР»РіРѕСЂРёС‚Рј Cooley-Tukey
     for (size_t len = 2; len <= n; len *= 2) {
-        double angle = (isInverse ? 2.0 : -2.0) * M_PI / len; // Поменяли знак
+        double angle = (isInverse ? 2.0 : -2.0) * M_PI / len; // РџРѕРјРµРЅСЏР»Рё Р·РЅР°Рє
         Complex wLen(cos(angle), sin(angle));
         for (size_t i = 0; i < n; i += len) {
             Complex w(1);
@@ -85,19 +85,19 @@ void FFT::fftMixedRadix(std::vector<Complex>& data, int isInverse) {
         size_t m = n / 3;
         std::vector<Complex> x0(m), x1(m), x2(m);
 
-        // Разделение на подмассивы
+        // Р Р°Р·РґРµР»РµРЅРёРµ РЅР° РїРѕРґРјР°СЃСЃРёРІС‹
         for (size_t i = 0; i < m; ++i) {
             x0[i] = data[i * 3];
             x1[i] = data[i * 3 + 1];
             x2[i] = data[i * 3 + 2];
         }
 
-        // Рекурсивное применение БПФ
+        // Р РµРєСѓСЂСЃРёРІРЅРѕРµ РїСЂРёРјРµРЅРµРЅРёРµ Р‘РџР¤
         fftMixedRadix(x0, isInverse);
         fftMixedRadix(x1, isInverse);
         fftMixedRadix(x2, isInverse);
 
-        // Комбинирование результатов
+        // РљРѕРјР±РёРЅРёСЂРѕРІР°РЅРёРµ СЂРµР·СѓР»СЊС‚Р°С‚РѕРІ
         for (size_t k = 0; k < m; ++k) {
             double angle = (isInverse ? 2.0 : -2.0) * M_PI * k / n;
             Complex w(cos(angle), sin(angle));
@@ -107,7 +107,7 @@ void FFT::fftMixedRadix(std::vector<Complex>& data, int isInverse) {
             Complex t1 = x1[k] * w;
             Complex t2 = x2[k] * w2;
 
-            // Используем точные формулы для радикса 3
+            // РСЃРїРѕР»СЊР·СѓРµРј С‚РѕС‡РЅС‹Рµ С„РѕСЂРјСѓР»С‹ РґР»СЏ СЂР°РґРёРєСЃР° 3
             Complex omega = Complex(-0.5, isInverse ? 0.8660254037844386 : -0.8660254037844386); // w^(N/3)
             Complex omega2 = omega * omega;
 
@@ -117,9 +117,9 @@ void FFT::fftMixedRadix(std::vector<Complex>& data, int isInverse) {
         }
     }
     else if (n % 5 == 0) {
-        // Реализация для радикса 5 (пока не трогаем)
+        // Р РµР°Р»РёР·Р°С†РёСЏ РґР»СЏ СЂР°РґРёРєСЃР° 5 (РїРѕРєР° РЅРµ С‚СЂРѕРіР°РµРј)
     }
     else {
-        fftRadix2(data, isInverse); // Базовый случай
+        fftRadix2(data, isInverse); // Р‘Р°Р·РѕРІС‹Р№ СЃР»СѓС‡Р°Р№
     }
 }
