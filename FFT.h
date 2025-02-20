@@ -17,7 +17,7 @@ private:
     static void fftMixedRadix(std::vector<Complex>& data, int isInverse);
 };
 
-// Функция для генерации случайных чисел (метод суммы 12)
+// Р¤СѓРЅРєС†РёСЏ РґР»СЏ РіРµРЅРµСЂР°С†РёРё СЃР»СѓС‡Р°Р№РЅС‹С… С‡РёСЃРµР» (РјРµС‚РѕРґ СЃСѓРјРјС‹ 12)
 class RandomGenerator {
 public:
     static double Sum12();
