@@ -81,7 +81,74 @@ void FFT::fftMixedRadix(std::vector<Complex>& data, int isInverse) {
     size_t n = data.size();
     if (n <= 1) return;
 
-    if (n % 3 == 0) {
+    if (n % 5 == 0) {
+        size_t m = n / 5;
+        std::vector<Complex> x0(m), x1(m), x2(m), x3(m), x4(m);
+
+        // Разделение на подмассивы
+        for (size_t i = 0; i < m; ++i) {
+            x0[i] = data[i * 5];
+            x1[i] = data[i * 5 + 1];
+            x2[i] = data[i * 5 + 2];
+            x3[i] = data[i * 5 + 3];
+            x4[i] = data[i * 5 + 4];
+        }
+
+        // Рекурсивное применение БПФ
+        fftMixedRadix(x0, isInverse);
+        fftMixedRadix(x1, isInverse);
+        fftMixedRadix(x2, isInverse);
+        fftMixedRadix(x3, isInverse);
+        fftMixedRadix(x4, isInverse);
+
+        // Комбинирование результатов (бабочка радикса-5)
+        for (size_t k = 0; k < m; ++k) {
+            double angle = (isInverse ? 2.0 : -2.0) * M_PI * k / n;
+            Complex w(cos(angle), sin(angle));
+            Complex w2 = w * w;
+            Complex w3 = w2 * w;
+            Complex w4 = w2 * w2;
+
+            Complex t0 = x0[k];
+            Complex t1 = x1[k] * w;
+            Complex t2 = x2[k] * w2;
+            Complex t3 = x3[k] * w3;
+            Complex t4 = x4[k] * w4;
+
+            // Формулы для радикса-5
+            Complex a0 = t0 + t1 + t2 + t3 + t4;
+            Complex a1 = t0 + t1 * Complex(0.309016994374947, -0.9510565162951535) +
+                t2 * Complex(-0.809016994374947, -0.587785252292473) +
+                t3 * Complex(-0.809016994374947, 0.587785252292473) +
+                t4 * Complex(0.309016994374947, 0.9510565162951535);
+            Complex a2 = t0 + t1 * Complex(-0.809016994374947, -0.587785252292473) +
+                t2 * Complex(0.309016994374947, 0.9510565162951535) +
+                t3 * Complex(0.309016994374947, -0.9510565162951535) +
+                t4 * Complex(-0.809016994374947, 0.587785252292473);
+            Complex a3 = t0 + t1 * Complex(-0.809016994374947, 0.587785252292473) +
+                t2 * Complex(0.309016994374947, -0.9510565162951535) +
+                t3 * Complex(0.309016994374947, 0.9510565162951535) +
+                t4 * Complex(-0.809016994374947, -0.587785252292473);
+            Complex a4 = t0 + t1 * Complex(0.309016994374947, 0.9510565162951535) +
+                t2 * Complex(-0.809016994374947, 0.587785252292473) +
+                t3 * Complex(-0.809016994374947, -0.587785252292473) +
+                t4 * Complex(0.309016994374947, -0.9510565162951535);
+
+            if (isInverse) {
+                a1 = std::conj(a1);
+                a2 = std::conj(a2);
+                a3 = std::conj(a3);
+                a4 = std::conj(a4);
+            }
+
+            data[k] = a0;
+            data[k + m] = a1;
+            data[k + 2 * m] = a2;
+            data[k + 3 * m] = a3;
+            data[k + 4 * m] = a4;
+        }
+    }
+    else if (n % 3 == 0) {
         size_t m = n / 3;
         std::vector<Complex> x0(m), x1(m), x2(m);
 
@@ -101,14 +168,13 @@ void FFT::fftMixedRadix(std::vector<Complex>& data, int isInverse) {
         for (size_t k = 0; k < m; ++k) {
             double angle = (isInverse ? 2.0 : -2.0) * M_PI * k / n;
             Complex w(cos(angle), sin(angle));
-            Complex w2 = w * w; // w^2
+            Complex w2 = w * w;
 
             Complex t0 = x0[k];
             Complex t1 = x1[k] * w;
             Complex t2 = x2[k] * w2;
 
-            // Используем точные формулы для радикса 3
-            Complex omega = Complex(-0.5, isInverse ? 0.8660254037844386 : -0.8660254037844386); // w^(N/3)
+            Complex omega = Complex(-0.5, isInverse ? 0.8660254037844386 : -0.8660254037844386);
             Complex omega2 = omega * omega;
 
             data[k] = t0 + t1 + t2;
@@ -116,10 +182,30 @@ void FFT::fftMixedRadix(std::vector<Complex>& data, int isInverse) {
             data[k + 2 * m] = t0 + t1 * omega2 + t2 * omega;
         }
     }
-    else if (n % 5 == 0) {
-        // Реализация для радикса 5 (пока не трогаем)
-    }
-    else {
-        fftRadix2(data, isInverse); // Базовый случай
+    else if (n % 2 == 0) {
+        size_t m = n / 2;
+        std::vector<Complex> x0(m), x1(m);
+
+        // Разделение на подмассивы
+        for (size_t i = 0; i < m; ++i) {
+            x0[i] = data[i * 2];
+            x1[i] = data[i * 2 + 1];
+        }
+
+        // Рекурсивное применение БПФ
+        fftMixedRadix(x0, isInverse);
+        fftMixedRadix(x1, isInverse);
+
+        // Комбинирование результатов
+        for (size_t k = 0; k < m; ++k) {
+            double angle = (isInverse ? 2.0 : -2.0) * M_PI * k / n;
+            Complex w(cos(angle), sin(angle));
+
+            Complex t0 = x0[k];
+            Complex t1 = x1[k] * w;
+
+            data[k] = t0 + t1;
+            data[k + m] = t0 - t1;
+        }
     }
 }
