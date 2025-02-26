@@ -15,7 +15,7 @@ double computeRMSE(const std::vector<Complex>& original, const std::vector<Compl
 
 int main() {
     setlocale(LC_ALL, "Russian");
-    const size_t N = 9; // Пример длины, кратной 3 (можно менять на 8, 25 и т.д.)
+    const size_t N = 2700; 
 
     std::vector<Complex> data(N);
 
