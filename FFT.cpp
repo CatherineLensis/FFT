@@ -1,211 +1,178 @@
 #include "FFT.h"
 #include <cmath>
-#include <iostream>
+#include <stdexcept>
+#include <algorithm>
 
-#define M_PI 3.14159265358979323846
+const double PI = 3.14159265358979323846;
 
-double RandomGenerator::Sum12() {
-    static std::random_device rd;
-    static std::mt19937 rng(rd());
-    std::uniform_real_distribution<double> dist(-1.0, 1.0);
-    double sum = 0.0;
-    for (int i = 0; i < 12; i++) {
-        sum += dist(rng);
+std::map<int, int> FFT::factorize(int N) {
+    std::map<int, int> factors;
+    while (N % 2 == 0) {
+        factors[2]++;
+        N /= 2;
     }
-    return sum / 12.0;
+    while (N % 3 == 0) {
+        factors[3]++;
+        N /= 3;
+    }
+    while (N % 5 == 0) {
+        factors[5]++;
+        N /= 5;
+    }
+    if (N != 1) {
+        throw std::invalid_argument("N must be a product of 2, 3, and 5 only");
+    }
+    return factors;
 }
 
-void FFT::transform(std::vector<Complex>& data, int isInverse) {
-    size_t n = data.size();
+void FFT::fft_radix2(std::vector<std::complex<double>>& data) {
+    int N = data.size();
+    if (N <= 1) return;
 
-    // Проверка на кратность 2, 3, 5
-    size_t temp = n;
-    while (temp > 1) {
-        if (temp % 2 == 0) temp /= 2;
-        else if (temp % 3 == 0) temp /= 3;
-        else if (temp % 5 == 0) temp /= 5;
-        else {
-            std::cerr << "FFT не поддерживает длину " << n << " (должна быть кратна 2, 3 или 5)\n";
-            return;
-        }
+    std::vector<std::complex<double>> even(N / 2);
+    std::vector<std::complex<double>> odd(N / 2);
+    for (int i = 0; i < N / 2; i++) {
+        even[i] = data[2 * i];
+        odd[i] = data[2 * i + 1];
     }
 
-    if ((n & (n - 1)) == 0) {
-        fftRadix2(data, isInverse);
-    }
-    else {
-        fftMixedRadix(data, isInverse);
-    }
+    fft_radix2(even);
+    fft_radix2(odd);
 
-    // Масштабирование для обратного преобразования
-    if (isInverse) {
-        double scale = 1.0 / static_cast<double>(n);
-        for (auto& x : data) x *= scale;
+    for (int k = 0; k < N / 2; k++) {
+        std::complex<double> t = std::polar(1.0, -2 * PI * k / N) * odd[k];
+        data[k] = even[k] + t;
+        data[k + N / 2] = even[k] - t;
     }
 }
 
-void FFT::fftRadix2(std::vector<Complex>& data, int isInverse) {
-    size_t n = data.size();
-    if (n <= 1) return;
+void FFT::fft_radix3(std::vector<std::complex<double>>& data) {
+    int N = data.size();
+    if (N <= 1) return;
 
-    // Перестановка бит
-    size_t logN = std::log2(n);
-    for (size_t i = 0, j = 0; i < n; ++i) {
-        if (i < j) std::swap(data[i], data[j]);
-        size_t mask = n >> 1;
-        while (j & mask) {
-            j ^= mask;
-            mask >>= 1;
-        }
-        j ^= mask;
+    int N1 = N / 3;
+    std::vector<std::complex<double>> f0(N1), f1(N1), f2(N1);
+    for (int i = 0; i < N1; i++) {
+        f0[i] = data[i * 3];
+        f1[i] = data[i * 3 + 1];
+        f2[i] = data[i * 3 + 2];
     }
 
-    // Алгоритм Cooley-Tukey
-    for (size_t len = 2; len <= n; len *= 2) {
-        double angle = (isInverse ? 2.0 : -2.0) * M_PI / len; // Поменяли знак
-        Complex wLen(cos(angle), sin(angle));
-        for (size_t i = 0; i < n; i += len) {
-            Complex w(1);
-            for (size_t j = 0; j < len / 2; ++j) {
-                Complex u = data[i + j];
-                Complex v = data[i + j + len / 2] * w;
-                data[i + j] = u + v;
-                data[i + j + len / 2] = u - v;
-                w *= wLen;
+    fft_radix3(f0);
+    fft_radix3(f1);
+    fft_radix3(f2);
+
+    std::complex<double> w = std::polar(1.0, -2 * PI / 3);
+    for (int k = 0; k < N1; k++) {
+        std::complex<double> wk = std::polar(1.0, -2 * PI * k / N);
+        std::complex<double> t1 = wk * f1[k];
+        std::complex<double> t2 = wk * wk * f2[k];
+        data[k] = f0[k] + t1 + t2;
+        data[k + N1] = f0[k] + w * t1 + w * w * t2;
+        data[k + 2 * N1] = f0[k] + w * w * t1 + w * t2;
+    }
+}
+
+void FFT::fft_radix5(std::vector<std::complex<double>>& data) {
+    int N = data.size();
+    if (N <= 1) return;
+
+    int N1 = N / 5;
+    std::vector<std::complex<double>> f[5];
+    for (int i = 0; i < 5; i++) {
+        f[i].resize(N1);
+        for (int j = 0; j < N1; j++) {
+            f[i][j] = data[j * 5 + i];
+        }
+        fft_radix5(f[i]);
+    }
+
+    for (int k = 0; k < N1; k++) {
+        std::complex<double> wk = std::polar(1.0, -2 * PI * k / N);
+        std::complex<double> w[5] = {1.0, wk, wk * wk, wk * wk * wk, wk * wk * wk * wk};
+        std::complex<double> t[5];
+        for (int i = 0; i < 5; i++) {
+            t[i] = w[i] * f[i][k];
+        }
+        data[k] = f[0][k] + t[1] + t[2] + t[3] + t[4];
+        data[k + N1] = f[0][k] + w[1] * t[1] + w[2] * t[2] + w[3] * t[3] + w[4] * t[4];
+        data[k + 2 * N1] = f[0][k] + w[2] * t[1] + w[4] * t[2] + w[1] * t[3] + w[3] * t[4];
+        data[k + 3 * N1] = f[0][k] + w[3] * t[1] + w[1] * t[2] + w[4] * t[3] + w[2] * t[4];
+        data[k + 4 * N1] = f[0][k] + w[4] * t[1] + w[3] * t[2] + w[2] * t[3] + w[1] * t[4];
+    }
+}
+
+void FFT::mixed_radix_permute(std::vector<std::complex<double>>& data, int N, const std::map<int, int>& factors) {
+    // Простая перестановка для демонстрации; для полной корректности нужна обобщенная версия
+    std::vector<std::complex<double>> temp = data;
+    int stride = 1;
+    for (auto [radix, power] : factors) {
+        int size = std::pow(radix, power);
+        for (int i = 0; i < N; i++) {
+            int idx = 0, t = i;
+            for (int j = 0; j < power; j++) {
+                idx = idx * radix + (t % radix);
+                t /= radix;
+            }
+            idx = idx * (N / size) + (i / size);
+            data[i] = temp[idx];
+        }
+        stride *= size;
+    }
+}
+
+void FFT::fft_mixed_radix(std::vector<std::complex<double>>& data, const std::map<int, int>& factors) {
+    int N = data.size();
+    if (N == 1) return;
+
+    if (factors.at(2) > 0) {
+        int size = 1 << factors.at(2);
+        std::vector<std::vector<std::complex<double>>> sub_data(N / size, std::vector<std::complex<double>>(size));
+        for (int i = 0; i < N / size; i++) {
+            for (int j = 0; j < size; j++) {
+                sub_data[i][j] = data[i + j * (N / size)];
+            }
+            fft_radix2(sub_data[i]);
+        }
+        for (int i = 0; i < N / size; i++) {
+            for (int j = 0; j < size; j++) {
+                data[i + j * (N / size)] = sub_data[i][j];
+            }
+        }
+    } else if (factors.at(3) > 0) {
+        int size = std::pow(3, factors.at(3));
+        std::vector<std::vector<std::complex<double>>> sub_data(N / size, std::vector<std::complex<double>>(size));
+        for (int i = 0; i < N / size; i++) {
+            for (int j = 0; j < size; j++) {
+                sub_data[i][j] = data[i + j * (N / size)];
+            }
+            fft_radix3(sub_data[i]);
+        }
+        for (int i = 0; i < N / size; i++) {
+            for (int j = 0; j < size; j++) {
+                data[i + j * (N / size)] = sub_data[i][j];
+            }
+        }
+    } else if (factors.at(5) > 0) {
+        int size = std::pow(5, factors.at(5));
+        std::vector<std::vector<std::complex<double>>> sub_data(N / size, std::vector<std::complex<double>>(size));
+        for (int i = 0; i < N / size; i++) {
+            for (int j = 0; j < size; j++) {
+                sub_data[i][j] = data[i + j * (N / size)];
+            }
+            fft_radix5(sub_data[i]);
+        }
+        for (int i = 0; i < N / size; i++) {
+            for (int j = 0; j < size; j++) {
+                data[i + j * (N / size)] = sub_data[i][j];
             }
         }
     }
 }
 
-void FFT::fftMixedRadix(std::vector<Complex>& data, int isInverse) {
-    size_t n = data.size();
-    if (n <= 1) return;
-
-    if (n % 5 == 0) {
-        size_t m = n / 5;
-        std::vector<Complex> x0(m), x1(m), x2(m), x3(m), x4(m);
-
-        // Разделение на подмассивы
-        for (size_t i = 0; i < m; ++i) {
-            x0[i] = data[i * 5];
-            x1[i] = data[i * 5 + 1];
-            x2[i] = data[i * 5 + 2];
-            x3[i] = data[i * 5 + 3];
-            x4[i] = data[i * 5 + 4];
-        }
-
-        // Рекурсивное применение БПФ
-        fftMixedRadix(x0, isInverse);
-        fftMixedRadix(x1, isInverse);
-        fftMixedRadix(x2, isInverse);
-        fftMixedRadix(x3, isInverse);
-        fftMixedRadix(x4, isInverse);
-
-        // Комбинирование результатов (бабочка радикса-5)
-        for (size_t k = 0; k < m; ++k) {
-            double angle = (isInverse ? 2.0 : -2.0) * M_PI * k / n;
-            Complex w(cos(angle), sin(angle));
-            Complex w2 = w * w;
-            Complex w3 = w2 * w;
-            Complex w4 = w2 * w2;
-
-            Complex t0 = x0[k];
-            Complex t1 = x1[k] * w;
-            Complex t2 = x2[k] * w2;
-            Complex t3 = x3[k] * w3;
-            Complex t4 = x4[k] * w4;
-
-            // Формулы для радикса-5
-            Complex a0 = t0 + t1 + t2 + t3 + t4;
-            Complex a1 = t0 + t1 * Complex(0.309016994374947, -0.9510565162951535) +
-                t2 * Complex(-0.809016994374947, -0.587785252292473) +
-                t3 * Complex(-0.809016994374947, 0.587785252292473) +
-                t4 * Complex(0.309016994374947, 0.9510565162951535);
-            Complex a2 = t0 + t1 * Complex(-0.809016994374947, -0.587785252292473) +
-                t2 * Complex(0.309016994374947, 0.9510565162951535) +
-                t3 * Complex(0.309016994374947, -0.9510565162951535) +
-                t4 * Complex(-0.809016994374947, 0.587785252292473);
-            Complex a3 = t0 + t1 * Complex(-0.809016994374947, 0.587785252292473) +
-                t2 * Complex(0.309016994374947, -0.9510565162951535) +
-                t3 * Complex(0.309016994374947, 0.9510565162951535) +
-                t4 * Complex(-0.809016994374947, -0.587785252292473);
-            Complex a4 = t0 + t1 * Complex(0.309016994374947, 0.9510565162951535) +
-                t2 * Complex(-0.809016994374947, 0.587785252292473) +
-                t3 * Complex(-0.809016994374947, -0.587785252292473) +
-                t4 * Complex(0.309016994374947, -0.9510565162951535);
-
-            if (isInverse) {
-                a1 = std::conj(a1);
-                a2 = std::conj(a2);
-                a3 = std::conj(a3);
-                a4 = std::conj(a4);
-            }
-
-            data[k] = a0;
-            data[k + m] = a1;
-            data[k + 2 * m] = a2;
-            data[k + 3 * m] = a3;
-            data[k + 4 * m] = a4;
-        }
-    }
-    else if (n % 3 == 0) {
-        size_t m = n / 3;
-        std::vector<Complex> x0(m), x1(m), x2(m);
-
-        // Разделение на подмассивы
-        for (size_t i = 0; i < m; ++i) {
-            x0[i] = data[i * 3];
-            x1[i] = data[i * 3 + 1];
-            x2[i] = data[i * 3 + 2];
-        }
-
-        // Рекурсивное применение БПФ
-        fftMixedRadix(x0, isInverse);
-        fftMixedRadix(x1, isInverse);
-        fftMixedRadix(x2, isInverse);
-
-        // Комбинирование результатов
-        for (size_t k = 0; k < m; ++k) {
-            double angle = (isInverse ? 2.0 : -2.0) * M_PI * k / n;
-            Complex w(cos(angle), sin(angle));
-            Complex w2 = w * w;
-
-            Complex t0 = x0[k];
-            Complex t1 = x1[k] * w;
-            Complex t2 = x2[k] * w2;
-
-            Complex omega = Complex(-0.5, isInverse ? 0.8660254037844386 : -0.8660254037844386);
-            Complex omega2 = omega * omega;
-
-            data[k] = t0 + t1 + t2;
-            data[k + m] = t0 + t1 * omega + t2 * omega2;
-            data[k + 2 * m] = t0 + t1 * omega2 + t2 * omega;
-        }
-    }
-    else if (n % 2 == 0) {
-        size_t m = n / 2;
-        std::vector<Complex> x0(m), x1(m);
-
-        // Разделение на подмассивы
-        for (size_t i = 0; i < m; ++i) {
-            x0[i] = data[i * 2];
-            x1[i] = data[i * 2 + 1];
-        }
-
-        // Рекурсивное применение БПФ
-        fftMixedRadix(x0, isInverse);
-        fftMixedRadix(x1, isInverse);
-
-        // Комбинирование результатов
-        for (size_t k = 0; k < m; ++k) {
-            double angle = (isInverse ? 2.0 : -2.0) * M_PI * k / n;
-            Complex w(cos(angle), sin(angle));
-
-            Complex t0 = x0[k];
-            Complex t1 = x1[k] * w;
-
-            data[k] = t0 + t1;
-            data[k + m] = t0 - t1;
-        }
-    }
+void FFT::fft(std::vector<std::complex<double>>& data) {
+    int N = data.size();
+    auto factors = factorize(N);
+    mixed_radix_permute(data, N, factors);
+    fft_mixed_radix(data, factors);
 }
