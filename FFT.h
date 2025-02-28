@@ -1,26 +1,34 @@
+// FFT.h
 #ifndef FFT_H
 #define FFT_H
 
-#include <complex>
 #include <vector>
-#include <random>
-#include <ctime>
-
-typedef std::complex<double> Complex;
+#include <complex>
+#include <map>
 
 class FFT {
 public:
-    static void transform(std::vector<Complex>& data, int isInverse);
+    // Основная функция БПФ для смешанных радиксов
+    static void fft(std::vector<std::complex<double>>& data);
 
 private:
-    static void fftRadix2(std::vector<Complex>& data, int isInverse);
-    static void fftMixedRadix(std::vector<Complex>& data, int isInverse);
-};
+    // Факторизация числа на радиксы 2, 3, 5
+    static std::map<int, int> factorize(int N);
 
-// Функция для генерации случайных чисел (метод суммы 12)
-class RandomGenerator {
-public:
-    static double Sum12();
+    // БПФ для радикса-2
+    static void fft_radix2(std::vector<std::complex<double>>& data);
+
+    // БПФ для радикса-3
+    static void fft_radix3(std::vector<std::complex<double>>& data);
+
+    // БПФ для радикса-5
+    static void fft_radix5(std::vector<std::complex<double>>& data);
+
+    // Рекурсивная функция для смешанных радиксов
+    static void fft_mixed_radix(std::vector<std::complex<double>>& data, const std::map<int, int>& factors);
+
+    // Перестановка данных для смешанных радиксов
+    static void mixed_radix_permute(std::vector<std::complex<double>>& data, int N, const std::map<int, int>& factors);
 };
 
 #endif // FFT_H
