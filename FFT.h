@@ -1,10 +1,13 @@
 // FFT.h
 #ifndef FFT_H
 #define FFT_H
-
-#include <vector>
 #include <complex>
+#include <vector>
+#include <random>
+#include <ctime>
 #include <map>
+
+typedef std::complex<double> Complex;
 
 class FFT {
 public:
