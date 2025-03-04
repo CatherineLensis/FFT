@@ -176,3 +176,22 @@ void FFT::fft(std::vector<std::complex<double>>& data) {
     mixed_radix_permute(data, N, factors);
     fft_mixed_radix(data, factors);
 }
+
+
+void FFT::transform(std::vector<std::complex<double>>& data, bool inverse) {
+    if (inverse) {
+        // Обратное преобразование 
+        for (auto &x : data) {
+            x = std::conj(x);
+        }
+        fft(data);
+        for (auto &x : data) {
+            x = std::conj(x) / static_cast<double>(data.size());
+        }
+    } else {
+        // Прямое преобразование
+        fft(data);
+    }
+}
+
+
