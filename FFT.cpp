@@ -102,12 +102,16 @@ void FFT::fft_radix5(std::vector<std::complex<double>>& data) {
     }
 }
 
-void FFT::mixed_radix_permute(std::vector<std::complex<double>>& data, int N, const std::map<int, int>& factors) {
-    // Простая перестановка для демонстрации; для полной корректности нужна обобщенная версия
-    std::vector<std::complex<double>> temp = data;
-    int stride = 1;
-    for (auto [radix, power] : factors) {
-        int size = std::pow(radix, power);
+void FFT::mixed_radix_permute(std::vector<Complex>& data, int N, const std::map<int, int>& factors) {
+    std::vector<Complex> temp = data;  
+
+    // Перебираем факторы по очереди
+    for (auto& kv : factors) {
+        int radix = kv.first;
+        int power = kv.second;
+        int size = static_cast<int>(std::pow(radix, power));
+
+        // Для каждого i вычисляем новый индекс
         for (int i = 0; i < N; i++) {
             int idx = 0, t = i;
             for (int j = 0; j < power; j++) {
@@ -117,7 +121,6 @@ void FFT::mixed_radix_permute(std::vector<std::complex<double>>& data, int N, co
             idx = idx * (N / size) + (i / size);
             data[i] = temp[idx];
         }
-        stride *= size;
     }
 }
 
