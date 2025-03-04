@@ -13,6 +13,8 @@ class FFT {
 public:
     // Основная функция БПФ для смешанных радиксов
     static void fft(std::vector<std::complex<double>>& data);
+    // Функция для прямого/обратного преобразования
+    static void transform(std::vector<std::complex<double>>& data, bool inverse);
 
 private:
     // Факторизация числа на радиксы 2, 3, 5
